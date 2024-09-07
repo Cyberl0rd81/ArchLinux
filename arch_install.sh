@@ -12,6 +12,8 @@ echo "4 = Docker incl. Portainer"
 echo "5 = Qemu incl. Cockpit"
 echo "6 = Pentesting Tools"
 echo "7 = VmWare Tools"
+echo "8 = Bootmanager UEFI"
+echo "9 = Bootmanager Syslinux"
 echo "###################################"
 read -p "Bitte gib eine Mehrfachauswahl mit , getrennt an z.B. 1, 4, 5: " Pakete
 IFS=',' read -r -a pakete_array <<< "$Pakete"
@@ -80,29 +82,45 @@ do
 		echo "Pentesting Tools werden installiert"
 	elif [ "$element" -eq 7 ]; then
 		echo "VmWare Tools werden installiert"
-		pacman -S --noconfirm open-vm-Tools gtkmm3 xf86-input-vmouse xf86-video-vmware mesa
+		pacman -S --noconfirm open-vm-tools gtkmm3 xf86-input-vmmouse xf86-video-vmware mesa
 		systemctl enable vmtoolsd.service vmware-vmblock-fuse.service
+	elif [ "$element" -eq 8 ]; then
+		echo "UEFI wird installiert/konfiguriert"
+		bootctl install
+		sleep 10
+		echo "title    Arch Linux" > /boot/loader/entries/arch-uefi.conf
+		echo "linux    /vmlinuz-linux" >> /boot/loader/entries/arch-uefi.conf
+		echo "initrd   /initramfs-linux.img" >> /boot/loader/entries/arch-uefi.conf
+		echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" >> /boot/loader/entries/arch-uefi.conf
+		sleep 10
+		echo "title    Arch Linux Fallback" > /boot/loader/entries/arch-uefi-fallback.conf
+		echo "linux    /vmlinuz-linux" >> /boot/loader/entries/arch-uefi-fallback.conf
+		echo "initrd   /initramfs-linux-fallback.img" >> /boot/loader/entries/arch-uefi-fallback.conf
+		echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" >> /boot/loader/entries/arch-uefi-fallback.conf
+		sleep 10
+		echo "default	arch-uefi.conf" >> /boot/loader/loader.conf
+		echo "timeout	4" >> /boot/loader/loader.conf
+		sleep 10
+		bootctl update
+		sleep 10
+	elif [ "$element" -eq  ]; then
+		echo "Syslinux wird installiert/konfiguriert"
+		pacman -S --noconfirm syslinux
+		echo "LABEL arch" > /boot/syslinux/syslinux_test.cfg
+		echo "MENU LABEL Arch Linux" >> /boot/syslinux/syslinux_test.cfg
+		echo "LINUX ../vmlinuz-linux" >> /boot/syslinux/syslinux_test.cfg
+		echo "APPEND root=LABEL=ROOT rw" >> /boot/syslinux/syslinux_test.cfg
+		echo "INITRD ../initramfs-linux.img" >> /boot/syslinux/syslinux_test.cfg
+		 
+		echo "LABEL archfallback" >> /boot/syslinux/syslinux_test.cfg
+		echo "MENU LABEL Arch Linux Fallback" >> /boot/syslinux/syslinux_test.cfg
+		echo "LINUX ../vmlinuz-linux" >> /boot/syslinux/syslinux_test.cfg
+		echo "APPEND root=LABEL=ROOT rw" >> /boot/syslinux/syslinux_test.cfg
+		echo "INITRD ../initramfs-linux-fallback.img" >> /boot/syslinux/syslinux_test.cfg
+		#syslinux-install_update -i -a -m
 	fi
 done
 
-### Bootmanager installieren
-bootctl install
-sleep 10
-echo "title    Arch Linux" > /boot/loader/entries/arch-uefi.conf
-echo "linux    /vmlinuz-linux" >> /boot/loader/entries/arch-uefi.conf
-echo "initrd   /initramfs-linux.img" >> /boot/loader/entries/arch-uefi.conf
-echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" >> /boot/loader/entries/arch-uefi.conf
-sleep 10
-echo "title    Arch Linux Fallback" >> /boot/loader/entries/arch-uefi-fallback.conf
-echo "linux    /vmlinuz-linux" >> /boot/loader/entries/arch-uefi-fallback.conf
-echo "initrd   /initramfs-linux-fallback.img" >> /boot/loader/entries/arch-uefi-fallback.conf
-echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" >> /boot/loader/entries/arch-uefi-fallback.conf
-sleep 10
-echo "default	arch-uefi.conf" /boot/loader/loader.conf
-echo "timeout	4" /boot/loader/loader.conf
-sleep 10
-bootctl update
-sleep 10
 exit
 
 
