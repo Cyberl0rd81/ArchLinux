@@ -33,7 +33,7 @@ echo "Partitionierung und Formatierung abgeschlossen."
 
 ### Pakete installieren
 echo "Pakete intallieren."
-pacstrap /mnt base base-devel linux linux-firmware dhcpcd nano iwd intel-ucode
+pacstrap /mnt base base-devel linux linux-firmware dhcpcd nano iwd intel-ucode efibootmgr dosfstools gptfdisk
 echo "Pakete installiert"
 
 ### Fstab anlegen
