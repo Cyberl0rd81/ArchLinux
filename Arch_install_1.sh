@@ -42,4 +42,4 @@ echo "Fstab angelegt"
 ### Chroot Umgebung starten
 cp arch_install.sh /mnt
 echo "Chroot starten"
-arch-chroot /mnt
+arch-chroot /mnt ./arch_install.sh
