@@ -103,21 +103,11 @@ do
 		sleep 10
 		bootctl update
 		sleep 10
-	elif [ "$element" -eq  ]; then
+	elif [ "$element" -eq 9 ]; then
 		echo "Syslinux wird installiert/konfiguriert"
 		pacman -S --noconfirm syslinux
-		echo "LABEL arch" > /boot/syslinux/syslinux_test.cfg
-		echo "MENU LABEL Arch Linux" >> /boot/syslinux/syslinux_test.cfg
-		echo "LINUX ../vmlinuz-linux" >> /boot/syslinux/syslinux_test.cfg
-		echo "APPEND root=LABEL=ROOT rw" >> /boot/syslinux/syslinux_test.cfg
-		echo "INITRD ../initramfs-linux.img" >> /boot/syslinux/syslinux_test.cfg
-		 
-		echo "LABEL archfallback" >> /boot/syslinux/syslinux_test.cfg
-		echo "MENU LABEL Arch Linux Fallback" >> /boot/syslinux/syslinux_test.cfg
-		echo "LINUX ../vmlinuz-linux" >> /boot/syslinux/syslinux_test.cfg
-		echo "APPEND root=LABEL=ROOT rw" >> /boot/syslinux/syslinux_test.cfg
-		echo "INITRD ../initramfs-linux-fallback.img" >> /boot/syslinux/syslinux_test.cfg
-		#syslinux-install_update -i -a -m
+		sed -i 's\APPEND root=/dev/sda3 rw\APPEND root=LABEL=ROOT rw' /boot/syslinux/syslinux.cfg
+		syslinux-install_update -i -a -m
 	fi
 done
 
