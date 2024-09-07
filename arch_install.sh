@@ -63,8 +63,9 @@ for element in "${pakete_array[@]}"
 do
 	if [ "$element" -eq 1 ]; then
 		echo "Xfce wird installiert"
-		pacman -S --noconfirm xorg-server xorg-apps xorg-xdm xfce4 xfc4-goodies terminator
+		pacman -S --noconfirm xorg-server xorg-xinit xorg-drivers xorg-apps xorg-xdm xfce4 xfc4-goodies terminator
 		systemctl enable xdm-archlinux.service
+		localectl set-x11-keymap de pc105 deadgraveacute
 	elif [ "$element" -eq 2 ]; then
 		echo "SSH wird installiert"
 		pacman -S --noconfirm openssh
@@ -80,7 +81,7 @@ do
 done
 
 ### Bootmanager installieren
-bootctl installieren
+bootctl install
 
 echo "title    Arch Linux" > /boot/loader/entries/arch-uefi.conf
 echo "linux    /vmlinuz-linux" > /boot/loader/entries/arch-uefi.conf
