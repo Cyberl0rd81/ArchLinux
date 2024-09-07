@@ -1,5 +1,7 @@
 #!/bin/bash
 
+### File in Linux Format convertieren: vim file.txt -c "set ff=unix" -c ":wq"
+
 ### Laufwerk definieren (z.B. /dev/sda)
 lsblk
 read -p "Bitte gib hier die Festplatte an: " disk

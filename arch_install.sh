@@ -79,13 +79,25 @@ do
 	fi
 done
 
+### Bootmanager installieren
+bootctl installieren
 
+echo "title    Arch Linux" > /boot/loader/entries/arch-uefi.conf
+echo "linux    /vmlinuz-linux" > /boot/loader/entries/arch-uefi.conf
+echo "initrd   /initramfs-linux.img" > /boot/loader/entries/arch-uefi.conf
+echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" > /boot/loader/entries/arch-uefi.conf
 
+echo "title    Arch Linux Fallback" > /boot/loader/entries/arch-uefi-fallback.conf
+echo "linux    /vmlinuz-linux" > /boot/loader/entries/arch-uefi-fallback.conf
+echo "initrd   /initramfs-linux-fallback.img" > /boot/loader/entries/arch-uefi-fallback.conf
+echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" > /boot/loader/entries/arch-uefi-fallback.conf
 
+echo "default	arch-uefi.conf" /boot/loader/loader.conf
+echo "timeout	4" /boot/loader/loader.conf
 
+bootctl update
 
-
-
+exit
 
 
 
