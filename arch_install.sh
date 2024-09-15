@@ -21,7 +21,8 @@ IFS=',' read -r -a pakete_array <<< "$Pakete"
 ### Hostname definiere
 echo $hostname > /etc/hostname
 
-### Deutsches Layout verwenden
+
+### Deutsches Layout verwenden te
 echo LANG=de_DE.UTF-8 > /etc/locale.conf
 echo LC_COLLATE= C >> /etc/locale.conf
 echo KEYMAP=de-latin1 > /etc/vconsole.conf
