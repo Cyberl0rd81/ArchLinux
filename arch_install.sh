@@ -73,12 +73,20 @@ do
 	elif [ "$element" -eq 2 ]; then
 		echo "SSH wird installiert"
 		pacman -S --noconfirm openssh
+		systemctl enable sshd.service
 	elif [ "$element" -eq 3 ]; then
 		echo "SMB/NFS wird installiert"
+		pacman -S --noconfirm samba nfs-utils
+		systemctl enable smb.service
+		wget -O /etc/samba/smb.conf https://git.samba.org/samba.git/?p=samba.git;a=blob_plain;f=examples/smb.conf.default;hb=HEAD
 	elif [ "$element" -eq 4 ]; then
 		echo "Docker incl. Portainer wird installiert"
+		pacman -S --noconfirm docker docker-compose podman
+		systemctl enable docker.service
 	elif [ "$element" -eq 5 ]; then
 		echo "Qemu incl. Cockpit wird installiert"
+		pacman -S qemu-full cockpit cockpit-machines cockpit-podman cockpit-storaged cockpit-packagekit networkmanager udisks2 pcp
+		systemctl enable cockpit.socket
 	elif [ "$element" -eq 6 ]; then
 		echo "Pentesting Tools werden installiert"
 	elif [ "$element" -eq 7 ]; then
