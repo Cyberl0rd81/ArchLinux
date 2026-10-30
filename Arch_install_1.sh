@@ -1,5 +1,11 @@
 #!/bin/bash
 
+### Installerscript mit folgendem Befehl herunterladen:
+### curl -O https://raw.githubusercontent.com/yourusername/yourrepository/main/arch_install.sh
+### curl -O https://raw.githubusercontent.com/yourusername/yourrepository/main/arch_install_1.sh
+### oder
+### git clone https://github.com/yourusername/yourrepository.git
+
 set -Eeuo pipefail
 
 if (( EUID != 0 )); then
