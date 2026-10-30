@@ -13,7 +13,7 @@ read -r -p "Bitte gib deinen Benutzernamen ein: " username
 echo "Wähle aus welche Pakete du installiert haben möchtest"
 echo "1 = Xfce incl. Loginmanager und Tools"
 echo "2 = SSH"
-echo "3 = Samba/NFS-Server"
+echo "3 = Samba-Server"
 echo "4 = Docker incl. Dockge"
 echo "5 = Qemu incl. Cockpit"
 echo "7 = VmWare Tools"
@@ -107,8 +107,8 @@ do
 		pacman -S --noconfirm openssh
 		systemctl enable sshd.service
 	elif [ "$element" -eq 3 ]; then
-		echo "SMB/NFS wird installiert"
-		pacman -S --noconfirm samba nfs-utils
+		echo "Samba wird installiert"
+		pacman -S --noconfirm samba
 		install -d -o "$username" -g users -m 2770 /srv/samba/shared
 		cat > /etc/samba/smb.conf <<EOF
 [global]
@@ -127,7 +127,7 @@ EOF
 		testparm -s
 		echo "Bitte ein Samba-Passwort für $username festlegen"
 		smbpasswd -a "$username"
-		systemctl enable smb.service nfs-server.service
+		systemctl enable smb.service
 	elif [ "$element" -eq 4 ]; then
 		echo "Docker incl. Dockge wird installiert"
 		pacman -S --noconfirm docker docker-compose podman
@@ -174,14 +174,14 @@ EOF
 	elif [ "$element" -eq 8 ]; then
 		echo "UEFI wird installiert/konfiguriert"
 		bootctl install
- 		mkdir -p /boot/loader/entries
+		mkdir -p /boot/loader/entries
 		cat > /boot/loader/entries/arch-uefi.conf <<'EOF'
 title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
 options root=LABEL=ROOT rw
 EOF
- 		cat > /boot/loader/entries/arch-uefi-fallback.conf <<'EOF'
+		cat > /boot/loader/entries/arch-uefi-fallback.conf <<'EOF'
 title   Arch Linux Fallback
 linux   /vmlinuz-linux
 initrd  /initramfs-linux-fallback.img
