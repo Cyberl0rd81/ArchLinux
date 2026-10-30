@@ -1,9 +1,15 @@
 #!/bin/bash
 
+set -euo pipefail
+
+if (( EUID != 0 )); then
+	printf 'Dieses Skript muss als root ausgeführt werden.\n' >&2
+	exit 1
+fi
 
 ### Grundvariablen abfragen
-read -p "Bitte gib den hier den Hostnamen ein: " hostname
-read -p "Bitte gib deinen Benutzernamen ein: " User
+read -r -p "Bitte gib den Hostnamen ein: " host_name
+read -r -p "Bitte gib deinen Benutzernamen ein: " username
 echo "Wähl aus welche Pakete du installiert haben möchtest"
 echo "1 = Xfce incl. Loginmanager und Tools"
 echo "2 = SSH"
@@ -15,16 +21,23 @@ echo "7 = VmWare Tools"
 echo "8 = Bootmanager UEFI"
 echo "9 = Bootmanager Syslinux"
 echo "###################################"
-read -p "Bitte gib eine Mehrfachauswahl mit , getrennt an z.B. 1, 4, 5: " Pakete
-IFS=',' read -r -a pakete_array <<< "$Pakete"
+read -r -p "Bitte gib eine Mehrfachauswahl mit , getrennt an z.B. 1, 4, 5: " selected_packages
+IFS=',' read -r -a pakete_array <<< "$selected_packages"
+for index in "${!pakete_array[@]}"; do
+	element=${pakete_array[index]//[[:space:]]/}
+	if [[ ! $element =~ ^[1-9]$ ]]; then
+		printf 'Ungültige Paketauswahl: %s\n' "${pakete_array[index]}" >&2
+		exit 1
+	fi
+	pakete_array[index]=$element
+done
 
 ### Hostname definiere
-echo $hostname > /etc/hostname
+printf '%s\n' "$host_name" > /etc/hostname
 
 
 ### Deutsches Layout verwenden te
-echo LANG=de_DE.UTF-8 > /etc/locale.conf
-echo LC_COLLATE= C >> /etc/locale.conf
+printf 'LANG=de_DE.UTF-8\nLC_COLLATE=C\n' > /etc/locale.conf
 echo KEYMAP=de-latin1 > /etc/vconsole.conf
 echo FONT=lat9w-16 >> /etc/vconsole.conf
 
@@ -32,10 +45,13 @@ echo FONT=lat9w-16 >> /etc/vconsole.conf
 ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 
 
-echo de_DE.UTF-8 UTF-8 >> /etc/locale.gen
-echo de_DE ISO-8859-1 >> /etc/locale.gen
-echo de_DE@euro ISO-8859-15 >> /etc/locale.gen
-echo en_US.UTF-8 UTF-8 >> /etc/locale.gen
+{
+	printf '%s\n' \
+		'de_DE.UTF-8 UTF-8' \
+		'de_DE ISO-8859-1' \
+		'de_DE@euro ISO-8859-15' \
+		'en_US.UTF-8 UTF-8'
+} >> /etc/locale.gen
 locale-gen
 
 ### Initramfs erzeugen
@@ -46,15 +62,19 @@ echo "Root Passwort definieren"
 passwd
 
 ### User anlegen
-useradd -m -g users -s /bin/bash $User
+useradd -m -g users -s /bin/bash "$username"
 echo "Bitte gib dein Userpasswort ein"
-passwd $User
+passwd "$username"
 
 ### User zu Gruppen hinzufügen
-gpasswd -a $User wheel audio video
+usermod -aG wheel,audio,video "$username"
+install -d -m 0750 /etc/sudoers.d
+printf '%%wheel ALL=(ALL:ALL) ALL\n' > /etc/sudoers.d/10-wheel
+chmod 0440 /etc/sudoers.d/10-wheel
+visudo -c
 
 ### Basispakete installieren
-pacman -S --noconfirm acpid ntp dbus avahi sudo connman cronie
+pacman -S --noconfirm acpid ntp dbus avahi sudo connman cronie wget
 
 ### Basispakte Dienste aktivieren
 systemctl enable cronie acpid ntpd avahi-daemon connman.service
@@ -67,7 +87,7 @@ for element in "${pakete_array[@]}"
 do
 	if [ "$element" -eq 1 ]; then
 		echo "Xfce wird installiert"
-		pacman -S --noconfirm xorg-server xorg-xinit xorg-drivers xorg-apps xorg-xdm xfce4 xfc4-goodies terminator
+		pacman -S --noconfirm xorg-server xorg-xinit xorg-drivers xorg-apps xorg-xdm xfce4 xfce4-goodies terminator
 		systemctl enable xdm-archlinux.service
 		localectl set-x11-keymap de pc105 deadgraveacute
 	elif [ "$element" -eq 2 ]; then
@@ -78,7 +98,7 @@ do
 		echo "SMB/NFS wird installiert"
 		pacman -S --noconfirm samba nfs-utils
 		systemctl enable smb.service
-		wget -O /etc/samba/smb.conf https://git.samba.org/samba.git/?p=samba.git;a=blob_plain;f=examples/smb.conf.default;hb=HEAD
+		wget -O /etc/samba/smb.conf 'https://git.samba.org/samba.git/?p=samba.git;a=blob_plain;f=examples/smb.conf.default;hb=HEAD'
 	elif [ "$element" -eq 4 ]; then
 		echo "Docker incl. Dockge wird installiert"
 		pacman -S --noconfirm docker docker-compose podman
@@ -127,22 +147,24 @@ EOF
 	elif [ "$element" -eq 8 ]; then
 		echo "UEFI wird installiert/konfiguriert"
 		bootctl install
-		sleep 10
-		echo "title    Arch Linux" > /boot/loader/entries/arch-uefi.conf
-		echo "linux    /vmlinuz-linux" >> /boot/loader/entries/arch-uefi.conf
-		echo "initrd   /initramfs-linux.img" >> /boot/loader/entries/arch-uefi.conf
-		echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" >> /boot/loader/entries/arch-uefi.conf
-		sleep 10
-		echo "title    Arch Linux Fallback" > /boot/loader/entries/arch-uefi-fallback.conf
-		echo "linux    /vmlinuz-linux" >> /boot/loader/entries/arch-uefi-fallback.conf
-		echo "initrd   /initramfs-linux-fallback.img" >> /boot/loader/entries/arch-uefi-fallback.conf
-		echo "options  root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8" >> /boot/loader/entries/arch-uefi-fallback.conf
-		sleep 10
-		echo "default	arch-uefi.conf" >> /boot/loader/loader.conf
-		echo "timeout	4" >> /boot/loader/loader.conf
-		sleep 10
+			mkdir -p /boot/loader/entries
+			cat > /boot/loader/entries/arch-uefi.conf <<'EOF'
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /initramfs-linux.img
+options root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8
+EOF
+			cat > /boot/loader/entries/arch-uefi-fallback.conf <<'EOF'
+title   Arch Linux Fallback
+linux   /vmlinuz-linux
+initrd  /initramfs-linux-fallback.img
+options root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8
+EOF
+			cat > /boot/loader/loader.conf <<'EOF'
+default arch-uefi
+timeout 4
+EOF
 		bootctl update
-		sleep 10
 	elif [ "$element" -eq 9 ]; then
 		echo "Syslinux wird installiert/konfiguriert"
 		pacman -S --noconfirm syslinux
