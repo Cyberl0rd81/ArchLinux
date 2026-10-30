@@ -13,24 +13,36 @@ read -r -p "Bitte gib deinen Benutzernamen ein: " username
 echo "Wähle aus welche Pakete du installiert haben möchtest"
 echo "1 = Xfce incl. Loginmanager und Tools"
 echo "2 = SSH"
-echo "3 = SMB/NFS"
+echo "3 = Samba/NFS-Server"
 echo "4 = Docker incl. Dockge"
 echo "5 = Qemu incl. Cockpit"
-echo "6 = Pentesting Tools"
 echo "7 = VmWare Tools"
 echo "8 = Bootmanager UEFI"
-echo "9 = Bootmanager Syslinux"
 echo "###################################"
 read -r -p "Bitte gib eine Mehrfachauswahl mit , getrennt an z.B. 1, 4, 5: " selected_packages
+if [[ -z $selected_packages ]]; then
+	printf 'Mindestens Option 8 (UEFI-Bootmanager) muss ausgewählt werden.\n' >&2
+	exit 1
+fi
 IFS=',' read -r -a pakete_array <<< "$selected_packages"
+declare -A selected_options=()
 for index in "${!pakete_array[@]}"; do
 	element=${pakete_array[index]//[[:space:]]/}
-	if [[ ! $element =~ ^[1-9]$ ]]; then
+	if [[ ! $element =~ ^(1|2|3|4|5|7|8)$ ]]; then
 		printf 'Ungültige Paketauswahl: %s\n' "${pakete_array[index]}" >&2
 		exit 1
 	fi
+	if [[ ${selected_options[$element]+selected} ]]; then
+		printf 'Option %s wurde mehrfach ausgewählt.\n' "$element" >&2
+		exit 1
+	fi
+	selected_options[$element]=selected
 	pakete_array[index]=$element
 done
+if [[ ! ${selected_options[8]+selected} ]]; then
+	printf 'Option 8 (UEFI-Bootmanager) ist erforderlich.\n' >&2
+	exit 1
+fi
 
 ### Hostname definiere
 printf '%s\n' "$host_name" > /etc/hostname
@@ -42,7 +54,7 @@ echo KEYMAP=de-latin1 > /etc/vconsole.conf
 echo FONT=lat9w-16 >> /etc/vconsole.conf
 
 ### Zeitzone definieren
-ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+		ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 
 
 {
@@ -97,8 +109,25 @@ do
 	elif [ "$element" -eq 3 ]; then
 		echo "SMB/NFS wird installiert"
 		pacman -S --noconfirm samba nfs-utils
-		systemctl enable smb.service
-		wget -O /etc/samba/smb.conf 'https://git.samba.org/samba.git/?p=samba.git;a=blob_plain;f=examples/smb.conf.default;hb=HEAD'
+		install -d -o "$username" -g users -m 2770 /srv/samba/shared
+		cat > /etc/samba/smb.conf <<EOF
+[global]
+   workgroup = WORKGROUP
+   server role = standalone server
+   security = user
+
+[shared]
+   path = /srv/samba/shared
+   browseable = yes
+   read only = no
+   valid users = $username
+   create mask = 0660
+   directory mask = 0770
+EOF
+		testparm -s
+		echo "Bitte ein Samba-Passwort für $username festlegen"
+		smbpasswd -a "$username"
+		systemctl enable smb.service nfs-server.service
 	elif [ "$element" -eq 4 ]; then
 		echo "Docker incl. Dockge wird installiert"
 		pacman -S --noconfirm docker docker-compose podman
@@ -136,10 +165,8 @@ EOF
 		systemctl enable dockge.service
 	elif [ "$element" -eq 5 ]; then
 		echo "Qemu incl. Cockpit wird installiert"
-		pacman -S qemu-full cockpit cockpit-machines cockpit-podman cockpit-storaged cockpit-packagekit networkmanager udisks2 pcp
+		pacman -S --noconfirm qemu-full cockpit cockpit-machines cockpit-podman cockpit-storaged cockpit-packagekit networkmanager udisks2 pcp
 		systemctl enable cockpit.socket
-	elif [ "$element" -eq 6 ]; then
-		echo "Pentesting Tools werden installiert"
 	elif [ "$element" -eq 7 ]; then
 		echo "VmWare Tools werden installiert"
 		pacman -S --noconfirm open-vm-tools gtkmm3 xf86-input-vmmouse xf86-video-vmware mesa
@@ -147,29 +174,24 @@ EOF
 	elif [ "$element" -eq 8 ]; then
 		echo "UEFI wird installiert/konfiguriert"
 		bootctl install
-			mkdir -p /boot/loader/entries
-			cat > /boot/loader/entries/arch-uefi.conf <<'EOF'
+ 		mkdir -p /boot/loader/entries
+		cat > /boot/loader/entries/arch-uefi.conf <<'EOF'
 title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
-options root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8
+options root=LABEL=ROOT rw
 EOF
-			cat > /boot/loader/entries/arch-uefi-fallback.conf <<'EOF'
+ 		cat > /boot/loader/entries/arch-uefi-fallback.conf <<'EOF'
 title   Arch Linux Fallback
 linux   /vmlinuz-linux
 initrd  /initramfs-linux-fallback.img
-options root=LABEL=ROOT rw lang=de init=/usr/lib/systemd/systemd locale=de_DE.UTF-8
+options root=LABEL=ROOT rw
 EOF
-			cat > /boot/loader/loader.conf <<'EOF'
+		cat > /boot/loader/loader.conf <<'EOF'
 default arch-uefi
 timeout 4
 EOF
 		bootctl update
-	elif [ "$element" -eq 9 ]; then
-		echo "Syslinux wird installiert/konfiguriert"
-		pacman -S --noconfirm syslinux
-		sed -i 's\APPEND root=/dev/sda3 rw\APPEND root=LABEL=ROOT rw' /boot/syslinux/syslinux.cfg
-		syslinux-install_update -i -a -m
 	fi
 done
 
