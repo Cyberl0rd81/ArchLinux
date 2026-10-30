@@ -8,7 +8,7 @@ echo "Wähl aus welche Pakete du installiert haben möchtest"
 echo "1 = Xfce incl. Loginmanager und Tools"
 echo "2 = SSH"
 echo "3 = SMB/NFS"
-echo "4 = Docker incl. Portainer"
+echo "4 = Docker incl. Dockge"
 echo "5 = Qemu incl. Cockpit"
 echo "6 = Pentesting Tools"
 echo "7 = VmWare Tools"
@@ -80,9 +80,40 @@ do
 		systemctl enable smb.service
 		wget -O /etc/samba/smb.conf https://git.samba.org/samba.git/?p=samba.git;a=blob_plain;f=examples/smb.conf.default;hb=HEAD
 	elif [ "$element" -eq 4 ]; then
-		echo "Docker incl. Portainer wird installiert"
+		echo "Docker incl. Dockge wird installiert"
 		pacman -S --noconfirm docker docker-compose podman
 		systemctl enable docker.service
+		mkdir -p /opt/dockge /opt/stacks
+		cat > /opt/dockge/docker-compose.yml <<'EOF'
+services:
+  dockge:
+    image: louislam/dockge:1
+    restart: unless-stopped
+    ports:
+      - 5001:5001
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/stacks:/opt/stacks
+    environment:
+      - DOCKGE_STACKS_DIR=/opt/stacks
+EOF
+		cat > /etc/systemd/system/dockge.service <<'EOF'
+[Unit]
+Description=Dockge Docker Compose UI
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/dockge
+ExecStart=/usr/bin/docker-compose up -d
+ExecStop=/usr/bin/docker-compose down
+
+[Install]
+WantedBy=multi-user.target
+EOF
+		systemctl enable dockge.service
 	elif [ "$element" -eq 5 ]; then
 		echo "Qemu incl. Cockpit wird installiert"
 		pacman -S qemu-full cockpit cockpit-machines cockpit-podman cockpit-storaged cockpit-packagekit networkmanager udisks2 pcp
@@ -121,7 +152,6 @@ do
 done
 
 exit
-
 
 
 
