@@ -10,7 +10,7 @@ fi
 ### Grundvariablen abfragen
 read -r -p "Bitte gib den Hostnamen ein: " host_name
 read -r -p "Bitte gib deinen Benutzernamen ein: " username
-echo "Wähl aus welche Pakete du installiert haben möchtest"
+echo "Wähle aus welche Pakete du installiert haben möchtest"
 echo "1 = Xfce incl. Loginmanager und Tools"
 echo "2 = SSH"
 echo "3 = SMB/NFS"
